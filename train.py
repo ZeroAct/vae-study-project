@@ -8,11 +8,11 @@ from torch.utils.data import DataLoader
 from utils.config import read_config
 from vae_pytorch.vae import Vae
 from vae_pytorch.dataset import CustomDataset
-from vae_pytorch.loss import vae_loss
+from vae_pytorch.loss import CustomLoss
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", default="./configs/default.ini", required=False, help=".ini file path")
+    parser.add_argument("-c", "--config_file", default="./configs/L1.ini", required=False, help=".ini file path")
     parser.add_argument("-v", "--val_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-s", "--save_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-n", "--num_workers", default=2, type=int, help="num_workers for DataLoader")
@@ -26,7 +26,7 @@ if __name__ == "__main__":
     
     args = get_args()
     
-    save_path      = "./logs/" + args.config_file.split('/')[-1].split('.')[0]
+    model_path     = "./logs/" + args.config_file.split('/')[-1].split('.')[0]
     val_interval   = args.val_interval
     save_interval  = args.save_interval
     num_workers    = args.num_workers
@@ -40,6 +40,7 @@ if __name__ == "__main__":
     batch_size     = cfg["hyperparameters"]["batch_size"]
     optimizer      = cfg["hyperparameters"]["optimizer"]
     learning_rate  = cfg["hyperparameters"]["learning_rate"]
+    loss_name      = cfg["hyperparameters"]["loss"]
     
     train_img_path = cfg["data"]["train_img_path"]
     val_img_path   = cfg["data"]["val_img_path"]
@@ -58,7 +59,7 @@ if __name__ == "__main__":
     train_gen = DataLoader(train_data, **dataloader_params)
     
     if val_img_path is not None:
-        val_data = CustomDataset(train_img_path, input_size)
+        val_data = CustomDataset(val_img_path, input_size)
         val_gen = DataLoader(val_data, **dataloader_params)
     
     steps_per_epoch = len(train_gen)
@@ -69,15 +70,17 @@ if __name__ == "__main__":
     
     vae = Vae(**cfg["model"]).to(device)
     
-    if not os.path.isdir(save_path):
-        os.mkdir(save_path)
+    if not os.path.isdir(model_path):
+        os.mkdir(model_path)
     else:
-        initial_epoch = vae.load_weights(save_path)
+        initial_epoch = vae.load_weights(model_path)
     
     # Train Setting
     if optimizer == "adam":
         optim = torch.optim.Adam(vae.parameters(), lr=learning_rate)
-    loss_function = vae_loss
+        
+    kld_weight = 1/batch_size/vae.final_size[0]/vae.final_size[1]
+    loss_function = CustomLoss(loss_name, kld_weight)
     
     # Train
     train_losses = [9999]
@@ -86,6 +89,8 @@ if __name__ == "__main__":
     for epoch in range(initial_epoch, epochs):
         # training
         train_loss = []
+        recon_loss = []
+        kld_loss   = []
         
         vae.train()
         pgbar = tqdm.tqdm(train_gen, total=len(train_gen))
@@ -94,15 +99,17 @@ if __name__ == "__main__":
             optim.zero_grad()
             
             data = data.to(device)
-            recon = vae.forward(data)
+            recon, mu, log_var = vae.forward(data)
             
-            loss = loss_function(data, recon)
+            loss, recon_loss_, kld_loss_ = loss_function(data, recon, mu, log_var)
             loss.backward()
             optim.step()
             
             train_loss.append(loss.item())
+            recon_loss.append(recon_loss_.item())
+            kld_loss.append(kld_loss_.item())
             
-            pgbar.set_postfix_str(f"loss : {sum(train_loss[-10:]) / len(train_loss[-10:]):.6f}")
+            pgbar.set_postfix_str(f"loss : {sum(train_loss[-10:]) / len(train_loss[-10:]):.6f} recon_loss : {sum(recon_loss[-10:]) / len(recon_loss[-10:]):.6f} kld_loss : {sum(kld_loss[-10:]) / len(kld_loss[-10:]):.6f}")
         
         train_losses.append(sum(train_loss) / len(train_loss))
         
@@ -115,9 +122,9 @@ if __name__ == "__main__":
             pgbar.set_description("Validating...")
             for data in pgbar:
                 data = data.to(device)
-                recon = vae.forward(data)
+                recon, mu, log_var = vae.forward(data)
                 
-                loss = loss_function(data, recon)
+                loss, recon_loss_, kld_loss_ = loss_function(data, recon, mu, log_var)
                 
                 val_loss.append(loss.item())
                 
@@ -130,7 +137,7 @@ if __name__ == "__main__":
         time.sleep(0.2)
         
         if (epoch + 1) % save_interval == 0:
-            torch.save(vae.state_dict(), os.path.join(save_path, f"{epoch}_train_{train_losses[-1]}_val_{val_losses[-1]}.pth"))
+            torch.save(vae.state_dict(), os.path.join(model_path, f"{epoch}_train_{train_losses[-1]}_val_{val_losses[-1]}.pth"))
         
         
         

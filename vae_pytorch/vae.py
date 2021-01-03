@@ -46,9 +46,11 @@ class Vae(nn.Module):
         
         self.encoder = nn.Sequential(*self.encoder_blocks)
         
-        self.encoder_output = nn.Sequential(nn.Linear(self.final_size[0] * self.final_size[1] * self.hidden_dims[-1], self.latent_dim), 
-                                            nn.BatchNorm1d(self.latent_dim), 
-                                            nn.LeakyReLU())
+        self.mu      = nn.Sequential(nn.Linear(self.final_size[0] * self.final_size[1] * self.hidden_dims[-1], self.latent_dim),
+                                     nn.Tanh())
+        self.log_var = nn.Sequential(nn.Linear(self.final_size[0] * self.final_size[1] * self.hidden_dims[-1], self.latent_dim),
+                                     nn.Tanh())
+        
         
         # Build Encoder
         self.decoder_input = nn.Sequential(nn.Linear(self.latent_dim, self.final_size[0] * self.final_size[1] * self.hidden_dims[-1]),
@@ -81,19 +83,23 @@ class Vae(nn.Module):
         
         self.hidden_dims.reverse()
         
-    def forward(self, x):
-        x = self.encode(x)
-        x = self.decode(x)
+    def forward(self, x) -> list:
+        mu, log_var = self.encode(x)
         
-        return x
+        latent = self.reparameterize(mu, log_var)
+        
+        recon = self.decode(latent)
+        
+        return recon, mu, log_var
         
     def encode(self, x):
         x = self.encoder(x)
         
         x = torch.flatten(x, start_dim=1)
-        x = self.encoder_output(x)
+        mu = self.mu(x)
+        log_var = self.log_var(x)
         
-        return x
+        return mu, log_var
     
     def decode(self, x):
         x = self.decoder_input(x)
@@ -103,32 +109,12 @@ class Vae(nn.Module):
         return x
     
     def debug(self, x):
-        
-        for i, b in enumerate(self.encoder_blocks):
-            print(b)
-            print(x.shape)
-            try: x = b(x)
-            except: print(self.encoder_blocks[i+1])
-            print(x.shape)
-            print()
-        
-        x = torch.flatten(x, start_dim=1)
-        x = self.encoder_output(x)
-        
-        x = self.decoder_input(x)
-        x = torch.reshape(x, (-1, self.hidden_dims[-1], self.final_size[0], self.final_size[1]))
-        
-        for i, b in enumerate(self.decoder_blocks):
-            print(b)
-            print(x.shape)
-            try: x = b(x)
-            except: print(self.encoder_blocks[i+1])
-            print(x.shape)
-            print()
-        return x
-    
-    def reparameterize(self, mu, var):
         pass
+    
+    def reparameterize(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        eps = torch.randn_like(std)
+        return eps * std + mu
     
     def predict_from_image(self, image):
         pass

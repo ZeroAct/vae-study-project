@@ -16,6 +16,7 @@ def create_default_config():
             "batch_size": '2',
             "optimizer": "adam",
             "learning_rate": '1e-2',
+            "loss": 'L1'
         }
     
     cfg["data"] = {
@@ -52,7 +53,8 @@ def read_config(cfg_path):
         "epochs":         get_("hyperparameters", "epochs"),
         "batch_size":     get_("hyperparameters", "batch_size"),
         "optimizer":      get_("hyperparameters", "optimizer"),
-        "learning_rate":  get_("hyperparameters", "learning_rate")
+        "learning_rate":  get_("hyperparameters", "learning_rate"),
+        "loss":           get_("hyperparameters", "loss")
     }
     
     result["data"] = {
