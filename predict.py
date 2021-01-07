@@ -11,7 +11,6 @@ from utils.functions import tensor_to_mat, postprocess_image
 
 from vae_pytorch.vae import Vae
 from vae_pytorch.dataset import CustomDataset
-from vae_pytorch.loss import vae_loss
 
 def get_args():
     parser = argparse.ArgumentParser()

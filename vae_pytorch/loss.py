@@ -17,7 +17,7 @@ class CustomLoss():
             
         elif recon_loss_name == "SSIM":
             ssim = pytorch_ssim.SSIM(window_size = 7).cuda()
-            self.recon_loss_func = lambda x, y: 1 - ssim(x, y)
+            self.recon_loss_func = lambda x, y: (1 - ssim(x, y))**2
             
         elif recon_loss_name == "custom":
             raise NotImplementedError

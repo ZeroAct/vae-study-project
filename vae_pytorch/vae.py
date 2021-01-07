@@ -47,9 +47,11 @@ class Vae(nn.Module):
         self.encoder = nn.Sequential(*self.encoder_blocks)
         
         self.mu      = nn.Sequential(nn.Linear(self.final_size[0] * self.final_size[1] * self.hidden_dims[-1], self.latent_dim),
-                                     nn.Tanh())
+                                     # nn.Tanh()
+                                     )
         self.log_var = nn.Sequential(nn.Linear(self.final_size[0] * self.final_size[1] * self.hidden_dims[-1], self.latent_dim),
-                                     nn.Tanh())
+                                     # nn.Tanh()
+                                     )
         
         
         # Build Encoder

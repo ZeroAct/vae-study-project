@@ -3,3 +3,4 @@ datasets/*
 results/*
 
 !/**/.gitkeep
+!/**/__pychace__/
