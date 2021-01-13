@@ -2,5 +2,8 @@ logs/*
 datasets/*
 results/*
 
+*.ini
+
+!/**/default.ini
 !/**/.gitkeep
 !/**/__pychace__/

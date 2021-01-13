@@ -48,7 +48,7 @@ if __name__ == "__main__":
     print(f"using {device}...")
     
     vae = Vae(**cfg["model"]).to(device)
-    _ = vae.load_weights(model_path)
+    _ = vae.load_weights(os.path.join(model_path, "weights"))
     
     if not os.path.isdir(result_path):
         os.mkdir(result_path)

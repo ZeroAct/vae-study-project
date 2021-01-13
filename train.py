@@ -1,4 +1,4 @@
-import os, argparse, time
+import os, argparse, time, random
 
 import tqdm
 
@@ -10,12 +10,18 @@ from vae_pytorch.vae import Vae
 from vae_pytorch.dataset import CustomDataset
 from vae_pytorch.loss import CustomLoss
 
+from utils.functions import tensor_to_mat, postprocess_image
+
+import matplotlib.pyplot as plt
+import numpy as np
+
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", default="./configs/L1.ini", required=False, help=".ini file path")
+    parser.add_argument("-c", "--config_file", default="./configs/cifar10.ini", required=False, help=".ini file path")
     parser.add_argument("-v", "--val_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-s", "--save_interval", default=1, type=int, help="val interval(epoch)")
-    parser.add_argument("-n", "--num_workers", default=2, type=int, help="num_workers for DataLoader")
+    parser.add_argument("-n", "--num_workers", default=8, type=int, help="num_workers for DataLoader")
+    parser.add_argument("-o", "--show", default=True, type=bool, help="show reconstruct images during training")
     
     args = parser.parse_args()
     
@@ -72,15 +78,16 @@ if __name__ == "__main__":
     
     if not os.path.isdir(model_path):
         os.mkdir(model_path)
+        os.mkdir(os.path.join(model_path, "weights"))
+        os.mkdir(os.path.join(model_path, "show"))
     else:
-        initial_epoch = vae.load_weights(model_path)
+        initial_epoch = vae.load_weights(os.path.join(model_path, "weights"))
     
     # Train Setting
     if optimizer == "adam":
         optim = torch.optim.Adam(vae.parameters(), lr=learning_rate)
         
-    kld_weight = 1/batch_size/vae.final_size[0]/vae.final_size[1]
-    loss_function = CustomLoss(loss_name, kld_weight)
+    loss_function = CustomLoss(loss_name)
     
     # Train
     train_losses = [9999]
@@ -94,7 +101,7 @@ if __name__ == "__main__":
         
         vae.train()
         pgbar = tqdm.tqdm(train_gen, total=len(train_gen))
-        pgbar.set_description(f"Epoch {epoch+1}/{epochs}")
+        pgbar.set_description(f"Epoch {epoch}/{epochs}")
         for data in pgbar:
             optim.zero_grad()
             
@@ -117,6 +124,9 @@ if __name__ == "__main__":
         if val_interval != 0 and (epoch + 1) % val_interval == 0:
             val_loss = []
             
+            # will saved in show directory
+            shows = []
+            
             vae.eval()
             pgbar = tqdm.tqdm(val_gen, total=len(val_gen))
             pgbar.set_description("Validating...")
@@ -129,15 +139,33 @@ if __name__ == "__main__":
                 val_loss.append(loss.item())
                 
                 pgbar.set_postfix_str(f"loss : {sum(val_loss[-10:]) / len(val_loss[-10:]):.6f}")
+                
+                if args.show and len(shows) < 5:
+                    shows.append([data[:1], recon[:1]])
             
             val_losses.append(sum(val_loss) / len(val_loss))
+            
+            if args.show:
+                fig, axs = plt.subplots(5, 1, figsize=(5, 8))
+                fig.suptitle("original -> reconstruction")
+                for i, (data, recon) in enumerate(shows):
+                    data, recon = data.cpu(), recon.cpu()
+                    data = postprocess_image(tensor_to_mat(data))[0][:,:,::-1]
+                    recon = postprocess_image(tensor_to_mat(recon))[0][:,:,::-1]
+                    
+                    axs[i].imshow(np.hstack([data, recon]))
+                    axs[i].set_xticks([])
+                    axs[i].set_yticks([])
+                
+                fig.savefig(os.path.join(model_path, "show", f"epoch_{epoch}.png"))
+                
         
         print(f"train_loss : {train_losses[-1]}, val_loss : {val_losses[-1]}")
         print()
         time.sleep(0.2)
         
         if (epoch + 1) % save_interval == 0:
-            torch.save(vae.state_dict(), os.path.join(model_path, f"{epoch}_train_{train_losses[-1]}_val_{val_losses[-1]}.pth"))
+            torch.save(vae.state_dict(), os.path.join(model_path, f"weights/{epoch}_train_{train_losses[-1]}_val_{val_losses[-1]}.pth"))
         
         
         
