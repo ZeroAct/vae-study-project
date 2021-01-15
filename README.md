@@ -22,6 +22,8 @@ This repo contains a simple implementation of VAE (Variational AutoEncoder) in p
 
 In `conifgs` directory you will see `default.ini` file like this.
 
+
+
 ```python
 [model]
 input_size = [256, 256]
@@ -30,7 +32,9 @@ latent_dim = 100
 hidden_dims = [64, 64, 128, 128, 256, 256]
 ```
 
-This section determines the model. (It should be same in train or test)
+This section determines the model.
+
+
 
 ```python
 [hyperparameters]
@@ -47,6 +51,8 @@ You can change hyperparameters here.
 
 You can use `L1`, `MSE`, `SSIM` loss functions. If you want to use other loss functions, you can implement them in `vae_pytorch/loss.py`.
 
+
+
 ```python
 [data]
 train_img_path = "datasets/train"
@@ -59,7 +65,7 @@ Set the image path. It will automatically get images recursively.
 
 #### 2.  Train
 
-After making .ini file, you train the model by script :
+After making `.ini` file, you train the model by script :
 
 ```python
 python train.py -c configs/my.ini # your config file (require)
