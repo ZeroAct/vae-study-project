@@ -7,18 +7,17 @@ class CustomLoss():
     def __init__(self, recon_loss_name):
         
         if recon_loss_name == "L1":
-            # self.recon_loss_func = torch.nn.L1Loss()
             self.recon_loss_func = lambda x, y: torch.mean(torch.sum(torch.abs(x - y), dim=(1,2,3)), dim=0)
             
         elif recon_loss_name == "MSE":
-            self.recon_loss_func = torch.nn.MSELoss()
+            self.recon_loss_func = lambda x, y: torch.mean(torch.sum(torch.abs(x - y)**2, dim=(1,2,3)), dim=0)
             
         elif recon_loss_name == "BCE":
-            self.recon_loss_func = F.binary_cross_entropy_with_logits
+            raise NotImplementedError
             
         elif recon_loss_name == "SSIM":
-            ssim = pytorch_ssim.SSIM(window_size = 7).cuda()
-            self.recon_loss_func = lambda x, y: (1 - ssim(x, y))**2
+            ssim = pytorch_ssim.SSIM(window_size = 3).cuda()
+            self.recon_loss_func = lambda x, y: torch.mean(torch.sum(1 - ssim(x, y), dim=(1,2,3)), dim=0)
             
         elif recon_loss_name == "custom":
             raise NotImplementedError

@@ -10,9 +10,8 @@ class CustomDataset(Dataset):
         self.root_dir = root_dir
         self.target_size = target_size
         
-        self.img_paths = [os.path.join(dp, f) for dp, dn, filenames in os.walk("datasets") 
+        self.img_paths = [os.path.join(dp, f) for dp, dn, filenames in os.walk(root_dir)
                           for f in filenames if os.path.splitext(f)[1] in ['.jpg', '.png', 'jpeg']]
-        # self.img_paths = glob.glob(f"{root_dir}/*.png")
     
     def __len__(self):
         return len(self.img_paths)

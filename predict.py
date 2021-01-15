@@ -14,8 +14,8 @@ from vae_pytorch.dataset import CustomDataset
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", default="./configs/vae_test.ini", required=False, help=".ini file path")
-    parser.add_argument("-d", "--data_path", default="datasets/vae_test", type=str, help="test data path")
+    parser.add_argument("-c", "--config_file", default="./configs/cifar10bn.ini", required=False, help=".ini file path")
+    parser.add_argument("-d", "--data_path", default="./datasets/test_img",type=str, help="test data path")
     parser.add_argument("-n", "--num_workers", default=2, type=int, help="num_workers for DataLoader")
     
     args = parser.parse_args()
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     
     dataloader_params = {'batch_size': batch_size,
                      'shuffle': True,
-                     'drop_last': True,
+                     'drop_last': False,
                      'num_workers': args.num_workers}
     
     test_data = CustomDataset(args.data_path, input_size)
@@ -58,18 +58,15 @@ if __name__ == "__main__":
     pgbar = tqdm.tqdm(test_gen, total=len(test_gen))
     for data in pgbar:
         data = data.to(device)
-        recon, mu, log_var = vae.forward(data)
-        data = data.cpu(); recon = recon.cpu(); mu = mu.cpu().detach().numpy(); log_var = log_var.cpu().detach().numpy()
+        recon, mu = vae.predict(data)
+        data = data.cpu(); recon = recon.cpu(); mu = mu.cpu().detach().numpy()
         
         data = postprocess_image(tensor_to_mat(data))
         recon = postprocess_image(tensor_to_mat(recon))
         
-        for x, y, mu, log_var in zip(data, recon, mu, log_var):
+        for x, y, mu in zip(data, recon, mu):
             cv2.imwrite(os.path.join(result_path, f"{idx}.png"), np.hstack([x, y])[:,:,::-1])
             with open(os.path.join(result_path, f"{idx}.txt"), 'w') as f:
                 f.write("mu\n")
                 f.write(",".join(list(map(str, list(mu)))))
-                f.write("\n")
-                f.write("log_var\n")
-                f.write(",".join(list(map(str, list(log_var)))))
             idx += 1

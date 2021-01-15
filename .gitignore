@@ -4,6 +4,8 @@ results/*
 
 *.ini
 
+temp.py
+
 !/**/default.ini
 !/**/.gitkeep
 !/**/__pychace__/

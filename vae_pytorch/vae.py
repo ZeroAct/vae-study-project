@@ -93,7 +93,16 @@ class Vae(nn.Module):
         recon = self.decode(latent)
         
         return recon, mu, log_var
+    
+    def predict(self, x):
+        mu, _ = self.encode(x)
         
+        # latent = self.reparameterize(mu, log_var)
+        
+        recon = self.decode(mu)
+        
+        return recon, mu
+    
     def encode(self, x):
         x = self.encoder(x)
         

@@ -17,7 +17,7 @@ import numpy as np
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-c", "--config_file", default="./configs/cifar10.ini", required=False, help=".ini file path")
+    parser.add_argument("-c", "--config_file", default="./configs/cifar10.ini", required=True, help=".ini file path")
     parser.add_argument("-v", "--val_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-s", "--save_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-n", "--num_workers", default=8, type=int, help="num_workers for DataLoader")
