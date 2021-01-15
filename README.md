@@ -47,7 +47,7 @@ loss = L1
 
 You can change hyperparameters here. 
 
-`adam` is the only supported optimizer yet. 
+`adam` is the only supported optimizer for now. 
 
 You can use `L1`, `MSE`, `SSIM` loss functions. If you want to use other loss functions, you can implement them in `vae_pytorch/loss.py`.
 
