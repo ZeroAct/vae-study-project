@@ -22,6 +22,7 @@ def get_args():
     parser.add_argument("-s", "--save_interval", default=1, type=int, help="val interval(epoch)")
     parser.add_argument("-n", "--num_workers", default=8, type=int, help="num_workers for DataLoader")
     parser.add_argument("-o", "--show", default=True, type=bool, help="show reconstruct images during training")
+    parser.add_argument("-sn", "--show_num", default=10, type=int, help="show reconstruct images during training num")
     
     args = parser.parse_args()
     
@@ -51,22 +52,26 @@ if __name__ == "__main__":
     train_img_path = cfg["data"]["train_img_path"]
     val_img_path   = cfg["data"]["val_img_path"]
     
-    if val_img_path is None: val_interval = 0
-    
     # DataLoader
     assert train_img_path is not None
     
     dataloader_params = {'batch_size': batch_size,
                          'shuffle': True,
-                         'drop_last': True,
+                         'drop_last': False,
                          'num_workers': num_workers}
     
     train_data = CustomDataset(train_img_path, input_size)
     train_gen = DataLoader(train_data, **dataloader_params)
     
-    if val_img_path is not None:
+    if val_img_path is not None or val_img_path != "None":
+        dataloader_params = {'batch_size': 1,
+							 'shuffle': False,
+							 'drop_last': False,
+							 'num_workers': num_workers}
         val_data = CustomDataset(val_img_path, input_size)
         val_gen = DataLoader(val_data, **dataloader_params)
+    else:
+        val_interval = 0
     
     steps_per_epoch = len(train_gen)
     
@@ -140,18 +145,18 @@ if __name__ == "__main__":
                 
                 pgbar.set_postfix_str(f"loss : {sum(val_loss[-10:]) / len(val_loss[-10:]):.6f}")
                 
-                if args.show and len(shows) < 5:
+                if args.show and len(shows) < args.show_num:
                     shows.append([data[:1], recon[:1]])
             
             val_losses.append(sum(val_loss) / len(val_loss))
             
             if args.show:
-                fig, axs = plt.subplots(5, 1, figsize=(5, 8))
+                fig, axs = plt.subplots(args.show_num, 1, figsize=(5, 2*args.show_num))
                 fig.suptitle("original -> reconstruction")
                 for i, (data, recon) in enumerate(shows):
                     data, recon = data.cpu(), recon.cpu()
-                    data = postprocess_image(tensor_to_mat(data))[0][:,:,::-1]
-                    recon = postprocess_image(tensor_to_mat(recon))[0][:,:,::-1]
+                    data = postprocess_image(tensor_to_mat(data))[0]
+                    recon = postprocess_image(tensor_to_mat(recon))[0]
                     
                     axs[i].imshow(np.hstack([data, recon]))
                     axs[i].set_xticks([])

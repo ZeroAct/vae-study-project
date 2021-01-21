@@ -10,7 +10,7 @@ from utils.config import read_config
 from utils.functions import tensor_to_mat, postprocess_image
 
 from vae_pytorch.vae import Vae
-from vae_pytorch.dataset import CustomDataset
+from vae_pytorch.dataset import CustomTestDataset
 
 def get_args():
     parser = argparse.ArgumentParser()
@@ -35,12 +35,12 @@ if __name__ == "__main__":
     input_size     = cfg["model"]["input_size"]
     batch_size     = cfg["hyperparameters"]["batch_size"]
     
-    dataloader_params = {'batch_size': batch_size,
+    dataloader_params = {'batch_size': 1,
                      'shuffle': True,
                      'drop_last': False,
                      'num_workers': args.num_workers}
     
-    test_data = CustomDataset(args.data_path, input_size)
+    test_data = CustomTestDataset(args.data_path, input_size)
     test_gen = DataLoader(test_data, **dataloader_params)
     
     # Model
@@ -56,7 +56,9 @@ if __name__ == "__main__":
     idx = 0
     vae.eval()
     pgbar = tqdm.tqdm(test_gen, total=len(test_gen))
-    for data in pgbar:
+    for (data, img_path) in pgbar:
+        img_name = os.path.splitext(os.path.split(img_path[0])[-1])[0]
+	
         data = data.to(device)
         recon, mu = vae.predict(data)
         data = data.cpu(); recon = recon.cpu(); mu = mu.cpu().detach().numpy()
@@ -65,8 +67,8 @@ if __name__ == "__main__":
         recon = postprocess_image(tensor_to_mat(recon))
         
         for x, y, mu in zip(data, recon, mu):
-            cv2.imwrite(os.path.join(result_path, f"{idx}.png"), np.hstack([x, y])[:,:,::-1])
-            with open(os.path.join(result_path, f"{idx}.txt"), 'w') as f:
+            cv2.imwrite(os.path.join(result_path, f"{img_name}.png"), np.hstack([x, y])[:,:,::-1])
+            with open(os.path.join(result_path, f"{img_name}.txt"), 'w') as f:
                 f.write("mu\n")
                 f.write(",".join(list(map(str, list(mu)))))
             idx += 1
